@@ -103,23 +103,23 @@ export class ElementKit {
     }
 }
 export interface Options {
-    limit?: number,
-    sort?: 'inserted_at' | 'transceived_at'
-    sortDirection?: 'asc' | 'desc'
-    retrieveAfterId?: string
+    limit?: number;
+    sort?: 'inserted_at' | 'transceived_at';
+    sortDirection?: 'asc' | 'desc';
+    retrieveAfterId?: string;
 }
 
 export interface Reading {
-    id: string
-    device_id: string
-    transceived_at: Date
-    payload_encoding: string
-    payload: any
-    packet_type: string
-    meta: null | any
-    is_meta: boolean
-    interface_id: string
-    inserted_at: Date
+    id: string;
+    device_id: string;
+    transceived_at: Date;
+    payload_encoding: string;
+    payload: unknown;
+    packet_type: string;
+    meta: null | unknown;
+    is_meta: boolean;
+    interface_id: string;
+    inserted_at: Date;
 }
 
 export interface CreateDeviceInterface {
@@ -139,38 +139,38 @@ export interface DeviceInterface {
 export interface ElementResponse<T> {
     status: number;
     ok: boolean;
-    retrieve_after_id: null | string
+    retrieve_after_id: null | string;
     body: T;
 }
 
 export interface Device {
-    id: string
-    mandate_id: string
-    name: string
-    slug: string
-    parser_id: string | null
-    location: any
-    tags: Tag[]
-    interfaces: DeviceInterface
+    id: string;
+    mandate_id: string;
+    name: string;
+    slug: string;
+    parser_id: string | null;
+    location: unknown;
+    tags: Tag[];
+    interfaces: DeviceInterface;
 }
 export interface Tag {
-    updated_at: Date
-    slug: string
-    profile_data: []
-    parent_id: string | null
-    name: string
-    mandate_id: string
-    inserted_at: Date
-    id: string
-    group_interface_id: string | null
-    fields: any,
-    description: string | null,
-    default_readings_view_id: string | null
-    default_packets_view_id: string | null
-    default_layers_id: string | null
-    default_graph_preset_id: string | null
-    default_devices_view_id: string | null
-    color_hue: number
+    updated_at: Date;
+    slug: string;
+    profile_data: [];
+    parent_id: string | null;
+    name: string;
+    mandate_id: string;
+    inserted_at: Date;
+    id: string;
+    group_interface_id: string | null;
+    fields: unknown;
+    description: string | null;
+    default_readings_view_id: string | null;
+    default_packets_view_id: string | null;
+    default_layers_id: string | null;
+    default_graph_preset_id: string | null;
+    default_devices_view_id: string | null;
+    color_hue: number;
 }
 
 export interface ElementApiOptions {
@@ -184,11 +184,11 @@ export interface ElementActionResponse {
     state: 'pending' | unknown;
     result: null | unknown;
     order: null | unknown;
-    opts: any;
+    opts: unknown;
     mandate_id: string;
     interface_id: string;
     inserted_at: Date;
     id: string;
-    executed_at: null | Date
-    device_id: string
+    executed_at: null | Date;
+    device_id: string;
 }
