@@ -6,3 +6,4 @@ lib
 coverage
 jest.config.js
 utils
+experiment.js
