@@ -1,4 +1,5 @@
 import axios from 'axios'
+import * as WebSocket from 'ws'
 
 export class ElementKit {
 
@@ -101,6 +102,69 @@ export class ElementKit {
             opts
         })).data
     }
+}
+import { EventEmitter } from 'events'
+
+export class ElementKitWS extends EventEmitter {
+
+    private apiKey: string
+    private serviceUrl: string
+    pingTimeout: NodeJS.Timeout
+    ws: WebSocket
+    type: string
+
+    constructor(options: ElementApiOptions, tagId: string, type: 'readings' | 'packets') {
+        super()
+        if (options.apiKey === undefined || options.apiKey === '') {
+            throw new Error("Missing api key")
+        }
+        if (options.serviceUrl !== undefined &&
+            (!options.serviceUrl.startsWith('wss') || !options.serviceUrl.startsWith('ws'))) {
+            throw new Error("serviceUrl must start with wss")
+        }
+
+        this.apiKey = options.apiKey
+        this.serviceUrl = options.serviceUrl || "wss://element-iot.com"
+        this.type = type
+
+
+        this.ws = new WebSocket(`${this.serviceUrl}/api/v1/tags/${tagId}/${type}/socket?auth=${this.apiKey}`);
+        this.ws.on('open', this.heartbeat.bind(this));
+        this.ws.on('ping', this.heartbeat.bind(this));
+        this.ws.on('close', function () {
+            clearTimeout(this.pingTimeout);
+        }.bind(this));
+        this.ws.on('error', function onError(error) {
+            this.emit('error', error)
+        }.bind(this))
+        this.ws.on('message', this.onMessage.bind(this))
+    }
+
+    private onMessage(message: WebSocket.Data) {
+        const messageString = message.toString('utf-8')
+        if (message !== 'pong') {
+            try {
+                const data = JSON.parse(messageString)[0]
+                if (data.event === 'reading_added') {
+                    this.emit(this.type, { ...data.body })
+                }
+
+            } catch (error) {
+                console.error(error);
+            }
+        }
+    }
+
+    private heartbeat() {
+        clearTimeout(this.pingTimeout)
+        this.pingTimeout = setTimeout(() => {
+            //todo handle timeout
+            console.log("ping timeout");            
+        }, 60000 + 1000)
+        this.ws.send('ping')
+    }
+
+
 }
 export interface Options {
     limit?: number;
