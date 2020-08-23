@@ -292,7 +292,7 @@ export interface Device {
 }
 export interface Point {
     type: 'Point';
-    coordinates: [];
+    coordinates: number[];
 }
 export interface Tag {
     updated_at: Date;
