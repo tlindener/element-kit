@@ -26,6 +26,30 @@ export class ElementKit {
         return (await axios.get(`${this.serviceUrl}/api/v1/devices/by-eui/${deviceEUI}?auth=${this.apiKey}`)).data
     }
 
+    async getDevicesInTag(tagId: string, options?: Options): Promise<Device[]> {
+        if (options?.limit) {
+            return (await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/devices?auth=${this.apiKey}${this.createParams(options)}`)).data.body 
+        } else {
+            let retrieveAfterId = undefined
+            let devices = []
+
+            do {
+                const params = this.createParams({
+                    limit: 100,
+                    retrieveAfterId, ...options
+                })
+                const response = (await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/devices?auth=${this.apiKey}${params}`)).data
+                devices = devices.concat(response.body)
+                retrieveAfterId = response.retrieve_after_id
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+            } while (retrieveAfterId !== undefined)
+            return devices
+        }
+    
+    }
+
     async getTag(tagId: string): Promise<ElementResponse<Tag>> {
         return (await axios.get(`${this.serviceUrl}/api/v1/tags/${tagId}?auth=${this.apiKey}`)).data
     }
@@ -50,6 +74,29 @@ export class ElementKit {
 
             } while (retrieveAfterId !== undefined)
             return tags
+        }
+    }
+
+    async getDevices(options?: Options): Promise<Device[]> {
+        if (options?.limit) {
+            return (await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/devices?auth=${this.apiKey}${this.createParams(options)}`)).data.body
+        } else {
+            let retrieveAfterId = undefined
+            let devices = []
+
+            do {
+                const params = this.createParams({
+                    limit: 100,
+                    retrieveAfterId, ...options
+                })
+                const response = (await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/devices?auth=${this.apiKey}${params}`)).data
+                devices = devices.concat(response.body)
+                retrieveAfterId = response.retrieve_after_id
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+            } while (retrieveAfterId !== undefined)
+            return devices
         }
     }
 
@@ -239,9 +286,13 @@ export interface Device {
     name: string;
     slug: string;
     parser_id: string | null;
-    location: unknown;
+    location?: Point;
     tags: Tag[];
     interfaces: DeviceInterface;
+}
+export interface Point {
+    type: 'Point';
+    coordinates: [];
 }
 export interface Tag {
     updated_at: Date;
