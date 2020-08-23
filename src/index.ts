@@ -26,9 +26,35 @@ export class ElementKit {
         return (await axios.get(`${this.serviceUrl}/api/v1/devices/by-eui/${deviceEUI}?auth=${this.apiKey}`)).data
     }
 
+    async getTag(tagId: string): Promise<ElementResponse<Tag>> {
+        return (await axios.get(`${this.serviceUrl}/api/v1/tags/${tagId}?auth=${this.apiKey}`)).data
+    }
+
+    async getTags(options?: Options): Promise<Tag[]> {
+        if (options?.limit) {
+            return (await axios.get<ElementResponse<Tag[]>>(`${this.serviceUrl}/api/v1/tags?auth=${this.apiKey}${this.createParams(options)}`)).data.body
+        } else {
+            let retrieveAfterId = undefined
+            let tags = []
+
+            do {
+                const params = this.createParams({
+                    limit: 100,
+                    retrieveAfterId, ...options
+                })
+                const response = (await axios.get<ElementResponse<Tag[]>>(`${this.serviceUrl}/api/v1/tags?auth=${this.apiKey}${params}`)).data
+                tags = tags.concat(response.body)
+                retrieveAfterId = response.retrieve_after_id
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+            } while (retrieveAfterId !== undefined)
+            return tags
+        }
+    }
+
 
     async getReadings(deviceId: string, options?: Options): Promise<Reading[]> {
-
         if (options?.limit) {
             return (await axios.get(`https://element-iot.com/api/v1/devices/${deviceId}/readings?auth=${this.apiKey}${this.createParams(options)}`)).data.body
         } else {
@@ -159,7 +185,7 @@ export class ElementKitWS extends EventEmitter {
         clearTimeout(this.pingTimeout)
         this.pingTimeout = setTimeout(() => {
             //todo handle timeout
-            console.log("ping timeout");            
+            console.log("ping timeout");
         }, 60000 + 1000)
         this.ws.send('ping')
     }
