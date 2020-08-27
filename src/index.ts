@@ -207,10 +207,13 @@ export class ElementKitWS extends EventEmitter {
             this.ws = new WebSocket(`${this.serviceUrl}/api/v1/${type}/socket?auth=${this.apiKey}`)
         }
 
-        this.ws.on('open', this.heartbeat.bind(this));
+        this.ws.on('open', this.open.bind(this));
         this.ws.on('ping', this.heartbeat.bind(this));
         this.ws.on('close', function () {
+            console.log('onClose');
+
             clearTimeout(this.pingTimeout);
+
         }.bind(this));
         this.ws.on('error', function onError(error) {
             this.emit('error', error)
@@ -224,7 +227,9 @@ export class ElementKitWS extends EventEmitter {
             try {
                 const data = JSON.parse(messageString)[0]
                 if (data.event === 'reading_added') {
-                    this.emit(this.type, { ...data.body })
+                    this.emit('readings', { ...data.body })
+                } else if (data.event === 'packet_added') {
+                    this.emit('packets', { ...data.body })
                 }
 
             } catch (error) {
@@ -232,13 +237,19 @@ export class ElementKitWS extends EventEmitter {
             }
         }
     }
+    private open() {
+        console.log("open");
+    }
 
     private heartbeat() {
+        console.log("sending heartbeat");
+
         clearTimeout(this.pingTimeout)
         this.pingTimeout = setTimeout(() => {
             //todo handle timeout
             console.log("ping timeout");
-        }, 60000 + 1000)
+        }, 30000 + 1000)
+        this.ws.ping()
         this.ws.send('ping')
     }
 
