@@ -194,7 +194,7 @@ export class ElementKitWS extends EventEmitter {
         }
         if (options.serviceUrl !== undefined &&
             (!options.serviceUrl.startsWith('wss') || !options.serviceUrl.startsWith('ws'))) {
-            throw new Error("serviceUrl must start with wss")
+            throw new Error("serviceUrl must start with ws:// or wss://")
         }
 
         this.apiKey = options.apiKey
@@ -211,10 +211,7 @@ export class ElementKitWS extends EventEmitter {
         this.ws.on('open', this.open.bind(this));
         this.ws.on('ping', this.heartbeat.bind(this));
         this.ws.on('close', function () {
-            console.log('onClose');
-
             clearTimeout(this.pingTimeout);
-
         }.bind(this));
         this.ws.on('error', function onError(error) {
             this.emit('error', error)
@@ -239,20 +236,17 @@ export class ElementKitWS extends EventEmitter {
         }
     }
     private open() {
-        console.log("open");
+        console.info("ELEMENT Kit Connection open")
+        this.emit("open")
+        this.heartbeat()
     }
 
     private heartbeat() {
-        console.log("sending heartbeat");
-
+        console.info("ELEMENT Kit sending heartbeat")
         clearTimeout(this.pingTimeout)
-        this.pingTimeout = setTimeout(() => {
-            //todo handle timeout
-            console.log("ping timeout");
-        }, 30000 + 1000)
+        this.pingTimeout = setTimeout(function () {
+            this.heartbeat()
+        }.bind(this), 30000 + 1000)
         this.ws.ping()
-        this.ws.send('ping')
     }
-
-
 }
