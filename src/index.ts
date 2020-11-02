@@ -1,8 +1,18 @@
-import axios from 'axios'
+import axios, { AxiosResponse } from 'axios'
 import * as WebSocket from 'ws'
 import { EventEmitter } from 'events'
 import { ElementApiOptions, ElementResponse, Device, Options, Tag, Reading, CreateDeviceInterface, DeviceInterface, ElementActionResponse } from './models'
 
+const raterLimiter = async (response: AxiosResponse) : Promise<unknown> => {
+    if (response.headers['x-ratelimit-remaining'] && response.headers['x-ratelimit-remaining'] > 10) {
+        console.log('Ratelimit above 10 use short pause')
+        return new Promise(resolve => setTimeout(resolve, 100));
+    } else {
+        console.log('Ratelimit below 10 use long pause')
+        return new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+}
 export class ElementKit {
 
     private apiKey: string
@@ -40,11 +50,12 @@ export class ElementKit {
                     limit: 100,
                     retrieveAfterId, ...options
                 })
-                const response = (await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/devices?auth=${this.apiKey}${params}`)).data
-                devices = devices.concat(response.body)
-                retrieveAfterId = response.retrieve_after_id
+                const response = await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/devices?auth=${this.apiKey}${params}`)
 
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                devices = devices.concat(response.data.body)
+                retrieveAfterId = response.data.retrieve_after_id
+
+                await raterLimiter(response)
 
             } while (retrieveAfterId !== undefined)
             return devices
@@ -68,11 +79,11 @@ export class ElementKit {
                     limit: 100,
                     retrieveAfterId, ...options
                 })
-                const response = (await axios.get<ElementResponse<Tag[]>>(`${this.serviceUrl}/api/v1/tags?auth=${this.apiKey}${params}`)).data
-                tags = tags.concat(response.body)
-                retrieveAfterId = response.retrieve_after_id
+                const response = (await axios.get<ElementResponse<Tag[]>>(`${this.serviceUrl}/api/v1/tags?auth=${this.apiKey}${params}`))
+                tags = tags.concat(response.data.body)
+                retrieveAfterId = response.data.retrieve_after_id
 
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await raterLimiter(response)
 
             } while (retrieveAfterId !== undefined)
             return tags
@@ -91,11 +102,11 @@ export class ElementKit {
                     limit: 100,
                     retrieveAfterId, ...options
                 })
-                const response = (await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/devices?auth=${this.apiKey}${params}`)).data
-                devices = devices.concat(response.body)
-                retrieveAfterId = response.retrieve_after_id
+                const response = (await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/devices?auth=${this.apiKey}${params}`))
+                devices = devices.concat(response.data.body)
+                retrieveAfterId = response.data.retrieve_after_id
 
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await raterLimiter(response)
 
             } while (retrieveAfterId !== undefined)
             return devices
@@ -115,12 +126,11 @@ export class ElementKit {
                     limit: 100,
                     retrieveAfterId, ...options
                 })
-                const response = (await axios.get(`https://element-iot.com/api/v1/devices/${deviceId}/readings?auth=${this.apiKey}${params}`)).data
-                devices = devices.concat(response.body)
-                retrieveAfterId = response.retrieve_after_id
+                const response = (await axios.get(`https://element-iot.com/api/v1/devices/${deviceId}/readings?auth=${this.apiKey}${params}`))
+                devices = devices.concat(response.data.body)
+                retrieveAfterId = response.data.retrieve_after_id
 
-                await new Promise(resolve => setTimeout(resolve, 1000));
-
+                await raterLimiter(response)
             } while (retrieveAfterId !== undefined)
             return devices
         }
