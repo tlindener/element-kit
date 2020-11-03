@@ -38,31 +38,6 @@ export class ElementKit {
         return (await axios.get(`${this.serviceUrl}/api/v1/devices/by-eui/${deviceEUI}?auth=${this.apiKey}`)).data
     }
 
-    async getDevicesInTag(tagId: string, options?: Options): Promise<Device[]> {
-        if (options?.limit) {
-            return (await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/devices?auth=${this.apiKey}${this.createParams(options)}`)).data.body
-        } else {
-            let retrieveAfterId = undefined
-            let devices = []
-
-            do {
-                const params = this.createParams({
-                    limit: 100,
-                    retrieveAfterId, ...options
-                })
-                const response = await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/devices?auth=${this.apiKey}${params}`)
-
-                devices = devices.concat(response.data.body)
-                retrieveAfterId = response.data.retrieve_after_id
-
-                await raterLimiter(response)
-
-            } while (retrieveAfterId !== undefined)
-            return devices
-        }
-
-    }
-
     async getTag(tagId: string): Promise<Tag> {
         return (await axios.get<ElementResponse<Tag>>(`${this.serviceUrl}/api/v1/tags/${tagId}?auth=${this.apiKey}`)).data.body
     }
@@ -176,6 +151,27 @@ export class ElementKit {
 
                 await raterLimiter(response)
 
+            } while (retrieveAfterId !== undefined)
+            return packets
+        }
+    }
+    async getPackets(deviceId: string, options?: Options): Promise<Packet[]> {
+        if (options?.limit) {
+            return (await axios.get(`${this.serviceUrl}/api/v1/devices/${deviceId}/packets?auth=${this.apiKey}${this.createParams(options)}`)).data.body
+        } else {
+            let retrieveAfterId = undefined
+            let packets = []
+
+            do {
+                const params = this.createParams({
+                    limit: 100,
+                    retrieveAfterId, ...options
+                })
+                const response = (await axios.get(`${this.serviceUrl}/api/v1/devices/${deviceId}/packets?auth=${this.apiKey}${params}`))
+                packets = packets.concat(response.data.body)
+                retrieveAfterId = response.data.retrieve_after_id
+
+                await raterLimiter(response)
             } while (retrieveAfterId !== undefined)
             return packets
         }
