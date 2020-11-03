@@ -18,6 +18,16 @@ export interface Reading {
     interface_id: string;
     inserted_at: Date;
 }
+export interface Packet {
+    id: string;
+    payload: unknown
+    payload_encoding: string
+    packet_type: string
+    meta: unknown;
+    transceived_at: Date;
+    inserted_at: Date;
+    is_meta: boolean;
+}
 
 export interface CreateDeviceInterface {
     name: string;

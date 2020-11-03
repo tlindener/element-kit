@@ -1,7 +1,7 @@
 import axios, { AxiosResponse } from 'axios'
 import * as WebSocket from 'ws'
 import { EventEmitter } from 'events'
-import { ElementApiOptions, ElementResponse, Device, Options, Tag, Reading, CreateDeviceInterface, DeviceInterface, ElementActionResponse } from './models'
+import { ElementApiOptions, ElementResponse, Device, Options, Tag, Reading, CreateDeviceInterface, DeviceInterface, ElementActionResponse, Packet } from './models'
 
 const raterLimiter = async (response: AxiosResponse) : Promise<unknown> => {
     if (response.headers['x-ratelimit-remaining'] && response.headers['x-ratelimit-remaining'] > 10) {
@@ -90,6 +90,29 @@ export class ElementKit {
         }
     }
 
+    async getDevicesByTagId(tagId: string, options?: Options): Promise<Device[]> {
+        if (options?.limit) {
+            return (await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/devices?auth=${this.apiKey}${this.createParams(options)}`)).data.body
+        } else {
+            let retrieveAfterId = undefined
+            let devices = []
+
+            do {
+                const params = this.createParams({
+                    limit: 100,
+                    retrieveAfterId, ...options
+                })
+                const response = (await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/devices?auth=${this.apiKey}${params}`))
+                devices = devices.concat(response.data.body)
+                retrieveAfterId = response.data.retrieve_after_id
+
+                await raterLimiter(response)
+
+            } while (retrieveAfterId !== undefined)
+            return devices
+        }
+    }
+
     async getDevices(options?: Options): Promise<Device[]> {
         if (options?.limit) {
             return (await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/devices?auth=${this.apiKey}${this.createParams(options)}`)).data.body
@@ -113,10 +136,53 @@ export class ElementKit {
         }
     }
 
+    async getReadingsByTagId(tagId: string, options?: Options): Promise<Reading[]> {
+        if (options?.limit) {
+            return (await axios.get<ElementResponse<Reading[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/readings?auth=${this.apiKey}${this.createParams(options)}`)).data.body
+        } else {
+            let retrieveAfterId = undefined
+            let readings = []
 
+            do {
+                const params = this.createParams({
+                    limit: 100,
+                    retrieveAfterId, ...options
+                })
+                const response = (await axios.get<ElementResponse<Reading[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/readings?auth=${this.apiKey}${params}`))
+                readings = readings.concat(response.data.body)
+                retrieveAfterId = response.data.retrieve_after_id
+
+                await raterLimiter(response)
+
+            } while (retrieveAfterId !== undefined)
+            return readings
+        }
+    }
+    async getPacketsByTagId(tagId: string, options?: Options): Promise<Packet[]> {
+        if (options?.limit) {
+            return (await axios.get<ElementResponse<Packet[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/packets?auth=${this.apiKey}${this.createParams(options)}`)).data.body
+        } else {
+            let retrieveAfterId = undefined
+            let packets = []
+
+            do {
+                const params = this.createParams({
+                    limit: 100,
+                    retrieveAfterId, ...options
+                })
+                const response = (await axios.get<ElementResponse<Packet[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/packets?auth=${this.apiKey}${params}`))
+                packets = packets.concat(response.data.body)
+                retrieveAfterId = response.data.retrieve_after_id
+
+                await raterLimiter(response)
+
+            } while (retrieveAfterId !== undefined)
+            return packets
+        }
+    }
     async getReadings(deviceId: string, options?: Options): Promise<Reading[]> {
         if (options?.limit) {
-            return (await axios.get(`https://element-iot.com/api/v1/devices/${deviceId}/readings?auth=${this.apiKey}${this.createParams(options)}`)).data.body
+            return (await axios.get(`${this.serviceUrl}/api/v1/devices/${deviceId}/readings?auth=${this.apiKey}${this.createParams(options)}`)).data.body
         } else {
             let retrieveAfterId = undefined
             let devices = []
@@ -126,7 +192,7 @@ export class ElementKit {
                     limit: 100,
                     retrieveAfterId, ...options
                 })
-                const response = (await axios.get(`https://element-iot.com/api/v1/devices/${deviceId}/readings?auth=${this.apiKey}${params}`))
+                const response = (await axios.get(`${this.serviceUrl}/api/v1/devices/${deviceId}/readings?auth=${this.apiKey}${params}`))
                 devices = devices.concat(response.data.body)
                 retrieveAfterId = response.data.retrieve_after_id
 
