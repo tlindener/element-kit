@@ -3,16 +3,18 @@ import * as WebSocket from 'ws'
 import { EventEmitter } from 'events'
 import { ElementApiOptions, ElementResponse, Device, Options, Tag, Reading, CreateDeviceInterface, DeviceInterface, ElementActionResponse, Packet } from './models'
 
-const raterLimiter = async (response: AxiosResponse) : Promise<unknown> => {
-    if (response.headers['x-ratelimit-remaining'] && response.headers['x-ratelimit-remaining'] > 10) {
-        console.log('Ratelimit above 10 use short pause')
-        return new Promise(resolve => setTimeout(resolve, 100));
-    } else {
-        console.log('Ratelimit below 10 use long pause')
-        return new Promise(resolve => setTimeout(resolve, 1000));
-    }
+const raterLimiter = async (response: AxiosResponse): Promise<unknown> => {
 
+    const rateLimitRemaining = response.headers['x-ratelimit-remaining']
+    const rateLimitReset = response.headers['x-ratelimit-reset']
+    console.log(`Rate limit remaining ${rateLimitRemaining}`)
+    if (rateLimitRemaining === 0) {
+        console.log(`Rate limit reset in ${rateLimitReset}`)
+        return new Promise(resolve => setTimeout(resolve, rateLimitReset))
+    }
+    return Promise.resolve()
 }
+
 export class ElementKit {
 
     private apiKey: string
@@ -43,158 +45,57 @@ export class ElementKit {
     }
 
     async getTags(options?: Options): Promise<Tag[]> {
-        if (options?.limit) {
+        if (options?.limit && options?.limit <= 100) {
             return (await axios.get<ElementResponse<Tag[]>>(`${this.serviceUrl}/api/v1/tags?auth=${this.apiKey}${this.createParams(options)}`)).data.body
         } else {
-            let retrieveAfterId = undefined
-            let tags = []
-
-            do {
-                const params = this.createParams({
-                    limit: 100,
-                    retrieveAfterId, ...options
-                })
-                const response = (await axios.get<ElementResponse<Tag[]>>(`${this.serviceUrl}/api/v1/tags?auth=${this.apiKey}${params}`))
-                tags = tags.concat(response.data.body)
-                retrieveAfterId = response.data.retrieve_after_id
-
-                await raterLimiter(response)
-
-            } while (retrieveAfterId !== undefined)
-            return tags
+            return this.paginate<Tag[]>(`tags`, options)
         }
     }
 
     async getDevicesByTagId(tagId: string, options?: Options): Promise<Device[]> {
-        if (options?.limit) {
+        if (options?.limit && options?.limit <= 100) {
             return (await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/devices?auth=${this.apiKey}${this.createParams(options)}`)).data.body
         } else {
-            let retrieveAfterId = undefined
-            let devices = []
-
-            do {
-                const params = this.createParams({
-                    limit: 100,
-                    retrieveAfterId, ...options
-                })
-                const response = (await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/devices?auth=${this.apiKey}${params}`))
-                devices = devices.concat(response.data.body)
-                retrieveAfterId = response.data.retrieve_after_id
-
-                await raterLimiter(response)
-
-            } while (retrieveAfterId !== undefined)
-            return devices
+            return this.paginate<Device[]>(`tags/${tagId}/devices`, options)
         }
     }
 
     async getDevices(options?: Options): Promise<Device[]> {
-        if (options?.limit) {
+        if (options?.limit && options?.limit <= 100) {
             return (await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/devices?auth=${this.apiKey}${this.createParams(options)}`)).data.body
         } else {
-            let retrieveAfterId = undefined
-            let devices = []
-
-            do {
-                const params = this.createParams({
-                    limit: 100,
-                    retrieveAfterId, ...options
-                })
-                const response = (await axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/devices?auth=${this.apiKey}${params}`))
-                devices = devices.concat(response.data.body)
-                retrieveAfterId = response.data.retrieve_after_id
-
-                await raterLimiter(response)
-
-            } while (retrieveAfterId !== undefined)
-            return devices
+            return this.paginate<Device[]>(`devices`, options)
         }
     }
 
     async getReadingsByTagId(tagId: string, options?: Options): Promise<Reading[]> {
-        if (options?.limit) {
+        if (options?.limit && options?.limit <= 100) {
             return (await axios.get<ElementResponse<Reading[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/readings?auth=${this.apiKey}${this.createParams(options)}`)).data.body
         } else {
-            let retrieveAfterId = undefined
-            let readings = []
-
-            do {
-                const params = this.createParams({
-                    limit: 100,
-                    retrieveAfterId, ...options
-                })
-                const response = (await axios.get<ElementResponse<Reading[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/readings?auth=${this.apiKey}${params}`))
-                readings = readings.concat(response.data.body)
-                retrieveAfterId = response.data.retrieve_after_id
-
-                await raterLimiter(response)
-
-            } while (retrieveAfterId !== undefined)
-            return readings
+            return this.paginate<Reading[]>(`tags/${tagId}/readings`, options)
         }
     }
+
     async getPacketsByTagId(tagId: string, options?: Options): Promise<Packet[]> {
-        if (options?.limit) {
+        if (options?.limit && options?.limit <= 100) {
             return (await axios.get<ElementResponse<Packet[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/packets?auth=${this.apiKey}${this.createParams(options)}`)).data.body
         } else {
-            let retrieveAfterId = undefined
-            let packets = []
-
-            do {
-                const params = this.createParams({
-                    limit: 100,
-                    retrieveAfterId, ...options
-                })
-                const response = (await axios.get<ElementResponse<Packet[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/packets?auth=${this.apiKey}${params}`))
-                packets = packets.concat(response.data.body)
-                retrieveAfterId = response.data.retrieve_after_id
-
-                await raterLimiter(response)
-
-            } while (retrieveAfterId !== undefined)
-            return packets
+            return this.paginate<Packet[]>(`tags/${tagId}/packets`, options)
         }
     }
+
     async getPackets(deviceId: string, options?: Options): Promise<Packet[]> {
-        if (options?.limit) {
+        if (options?.limit && options?.limit <= 100) {
             return (await axios.get(`${this.serviceUrl}/api/v1/devices/${deviceId}/packets?auth=${this.apiKey}${this.createParams(options)}`)).data.body
         } else {
-            let retrieveAfterId = undefined
-            let packets = []
-
-            do {
-                const params = this.createParams({
-                    limit: 100,
-                    retrieveAfterId, ...options
-                })
-                const response = (await axios.get(`${this.serviceUrl}/api/v1/devices/${deviceId}/packets?auth=${this.apiKey}${params}`))
-                packets = packets.concat(response.data.body)
-                retrieveAfterId = response.data.retrieve_after_id
-
-                await raterLimiter(response)
-            } while (retrieveAfterId !== undefined)
-            return packets
+            return this.paginate<Packet[]>(`devices/${deviceId}/packets`, options)
         }
     }
     async getReadings(deviceId: string, options?: Options): Promise<Reading[]> {
-        if (options?.limit) {
+        if (options?.limit && options?.limit <= 100) {
             return (await axios.get(`${this.serviceUrl}/api/v1/devices/${deviceId}/readings?auth=${this.apiKey}${this.createParams(options)}`)).data.body
         } else {
-            let retrieveAfterId = undefined
-            let devices = []
-
-            do {
-                const params = this.createParams({
-                    limit: 100,
-                    retrieveAfterId, ...options
-                })
-                const response = (await axios.get(`${this.serviceUrl}/api/v1/devices/${deviceId}/readings?auth=${this.apiKey}${params}`))
-                devices = devices.concat(response.data.body)
-                retrieveAfterId = response.data.retrieve_after_id
-
-                await raterLimiter(response)
-            } while (retrieveAfterId !== undefined)
-            return devices
+            return this.paginate<Reading[]>(`devices/${deviceId}/readings`, options)
         }
     }
 
@@ -203,16 +104,43 @@ export class ElementKit {
         if (options.limit) {
             params += `&limit=${options.limit}`
         }
+
         if (options.retrieveAfterId) {
             params += `&retrieve_after=${options.retrieveAfterId}`
         }
+
         if (options.sort) {
             params += `&sort=${options.sort}`
         }
+
         if (options.sortDirection) {
             params += `&sort_direction=${options.sortDirection}`
         }
+
+        if (options.filter) {
+            params += `&filter=${encodeURIComponent(options.filter)}`
+        }
+
         return params
+    }
+
+    private async paginate<T>(resource: string, options?: Options) {
+        let retrieveAfterId = undefined
+        let values = []
+        do {
+            const params = this.createParams({
+                limit: 100,
+                retrieveAfterId, ...options
+            })
+            const response = (await axios.get<ElementResponse<T>>(`${this.serviceUrl}/api/v1/${resource}?auth=${this.apiKey}${params}`))
+            values = values.concat(response.data.body)
+            retrieveAfterId = response.data.retrieve_after_id
+
+            await raterLimiter(response)
+
+        } while (retrieveAfterId !== undefined)
+        return values
+
     }
 
     async createDevice(name: string, tagId: string): Promise<ElementResponse<Device>> {

@@ -4,6 +4,7 @@ export interface Options {
     sort?: 'inserted_at' | 'transceived_at';
     sortDirection?: 'asc' | 'desc';
     retrieveAfterId?: string;
+    filter?: string;
 }
 
 export interface Reading {
