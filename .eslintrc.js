@@ -5,6 +5,6 @@ module.exports = {
     rules: {
         semi: "off",
         "camelcase": "off",
-        "@typescript-eslint/camelcase": ["error", { "properties": "never" }]
+        "@typescript-eslint/camelcase": 'off'
     }
 }
