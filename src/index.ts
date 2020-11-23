@@ -1,9 +1,12 @@
 import Axios, { AxiosResponse } from 'axios'
 import * as WebSocket from 'ws'
 import { EventEmitter } from 'events'
-import { ElementApiOptions, ElementResponse, Device, Options, Tag, Reading, CreateDeviceInterface, DeviceInterface, ElementActionResponse, Packet } from './models'
-import { CreateTagOpts } from './models/tags'
-import { MergeOptions } from './models/readings'
+import { ElementApiOptions, ElementResponse, Options } from './models'
+import { CreateTagOpts, Tag } from './models/tags'
+import { MergeOptions, Reading } from './models/readings'
+import { ElementActionResponse } from './models/actions'
+import { Device, CreateDeviceInterface, DeviceInterface } from './models/devices'
+import { Packet } from './models/packets'
 
 const raterLimiter = async (response: AxiosResponse): Promise<unknown> => {
 
