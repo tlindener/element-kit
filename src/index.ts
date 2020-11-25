@@ -1,4 +1,4 @@
-import Axios, { AxiosResponse } from 'axios'
+import axios, { AxiosInstance, AxiosResponse } from 'axios'
 import * as WebSocket from 'ws'
 import { EventEmitter } from 'events'
 import { ElementApiOptions, ElementResponse, Options } from './models'
@@ -22,7 +22,7 @@ const raterLimiter = async (response: AxiosResponse): Promise<unknown> => {
 }
 
 export class ElementKit {
-    private serviceUrl: string
+    private client: AxiosInstance
 
     constructor(options: ElementApiOptions) {
         if (options.apiKey === undefined || options.apiKey === '') {
@@ -32,29 +32,31 @@ export class ElementKit {
             (!options.serviceUrl.startsWith('https') || !options.serviceUrl.startsWith('http'))) {
             throw new Error("serviceUrl must start with https")
         }
-        this.serviceUrl = options.serviceUrl || "https://element-iot.com"
-        Axios.interceptors.request.use((config) => {
+        this.client = axios.create({
+            baseURL: `${options.serviceUrl || "https://element-iot.com"}/`,
+        })
+        this.client.interceptors.request.use((config) => {
             config.params = config.params || {};
             config.params['auth'] = options.apiKey
             return config;
         });
-        
     }
+    
     async getDevice(elementDeviceId: string): Promise<ElementResponse<Device>> {
-        return (await Axios.get(`${this.serviceUrl}/api/v1/devices/${elementDeviceId}`)).data
+        return (await this.client.get(`api/v1/devices/${elementDeviceId}`)).data
     }
 
     async findDeviceByDevEUI(deviceEUI: string): Promise<ElementResponse<Device[]>> {
-        return (await Axios.get(`${this.serviceUrl}/api/v1/devices/by-eui/${deviceEUI}`)).data
+        return (await this.client.get(`api/v1/devices/by-eui/${deviceEUI}`)).data
     }
 
     async getTag(tagId: string): Promise<Tag> {
-        return (await Axios.get<ElementResponse<Tag>>(`${this.serviceUrl}/api/v1/tags/${tagId}`)).data.body
+        return (await this.client.get<ElementResponse<Tag>>(`api/v1/tags/${tagId}`)).data.body
     }
 
     async getTags(options?: Options): Promise<Tag[]> {
         if (options?.limit && options?.limit <= 100) {
-            return (await Axios.get<ElementResponse<Tag[]>>(`${this.serviceUrl}/api/v1/tags?${this.createParams(options)}`)).data.body
+            return (await this.client.get<ElementResponse<Tag[]>>(`api/v1/tags?${this.createParams(options)}`)).data.body
         } else {
             return this.paginate<Tag[]>(`tags`, options)
         }
@@ -62,7 +64,7 @@ export class ElementKit {
 
     async getDevicesByTagId(tagId: string, options?: Options): Promise<Device[]> {
         if (options?.limit && options?.limit <= 100) {
-            return (await Axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/devices?${this.createParams(options)}`)).data.body
+            return (await this.client.get<ElementResponse<Device[]>>(`api/v1/tags/${tagId}/devices?${this.createParams(options)}`)).data.body
         } else {
             return this.paginate<Device[]>(`tags/${tagId}/devices`, options)
         }
@@ -70,7 +72,7 @@ export class ElementKit {
 
     async getDevices(options?: Options): Promise<Device[]> {
         if (options?.limit && options?.limit <= 100) {
-            return (await Axios.get<ElementResponse<Device[]>>(`${this.serviceUrl}/api/v1/devices?${this.createParams(options)}`)).data.body
+            return (await this.client.get<ElementResponse<Device[]>>(`api/v1/devices?${this.createParams(options)}`)).data.body
         } else {
             return this.paginate<Device[]>(`devices`, options)
         }
@@ -78,7 +80,7 @@ export class ElementKit {
 
     async getReadingsByTagId(tagId: string, options?: Options): Promise<Reading[]> {
         if (options?.limit && options?.limit <= 100) {
-            return (await Axios.get<ElementResponse<Reading[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/readings?${this.createParams(options)}`)).data.body
+            return (await this.client.get<ElementResponse<Reading[]>>(`api/v1/tags/${tagId}/readings?${this.createParams(options)}`)).data.body
         } else {
             return this.paginate<Reading[]>(`tags/${tagId}/readings`, options)
         }
@@ -86,7 +88,7 @@ export class ElementKit {
 
     async getPacketsByTagId(tagId: string, options?: Options): Promise<Packet[]> {
         if (options?.limit && options?.limit <= 100) {
-            return (await Axios.get<ElementResponse<Packet[]>>(`${this.serviceUrl}/api/v1/tags/${tagId}/packets?${this.createParams(options)}`)).data.body
+            return (await this.client.get<ElementResponse<Packet[]>>(`api/v1/tags/${tagId}/packets?${this.createParams(options)}`)).data.body
         } else {
             return this.paginate<Packet[]>(`tags/${tagId}/packets`, options)
         }
@@ -94,14 +96,14 @@ export class ElementKit {
 
     async getPackets(deviceId: string, options?: Options): Promise<Packet[]> {
         if (options?.limit && options?.limit <= 100) {
-            return (await Axios.get(`${this.serviceUrl}/api/v1/devices/${deviceId}/packets?${this.createParams(options)}`)).data.body
+            return (await this.client.get(`api/v1/devices/${deviceId}/packets?${this.createParams(options)}`)).data.body
         } else {
             return this.paginate<Packet[]>(`devices/${deviceId}/packets`, options)
         }
     }
     async getReadings(deviceId: string, options?: Options): Promise<Reading[]> {
         if (options?.limit && options?.limit <= 100) {
-            return (await Axios.get(`${this.serviceUrl}/api/v1/devices/${deviceId}/readings?${this.createParams(options)}`)).data.body
+            return (await this.client.get(`api/v1/devices/${deviceId}/readings?${this.createParams(options)}`)).data.body
         } else {
             return this.paginate<Reading[]>(`devices/${deviceId}/readings`, options)
         }
@@ -140,7 +142,7 @@ export class ElementKit {
                 limit: 100,
                 retrieveAfterId, ...options
             })
-            const response = (await Axios.get<ElementResponse<T>>(`${this.serviceUrl}/api/v1/${resource}?${params}`))
+            const response = (await this.client.get<ElementResponse<T>>(`api/v1/${resource}?${params}`))
             values = values.concat(response.data.body)
             retrieveAfterId = response.data.retrieve_after_id
 
@@ -152,7 +154,7 @@ export class ElementKit {
     }
 
     async createDevice(name: string, tagId: string): Promise<ElementResponse<Device>> {
-        return (await Axios.post(`${this.serviceUrl}/api/v1/devices`, {
+        return (await this.client.post(`api/v1/devices`, {
             device: {
                 name: name,
                 tags: [{
@@ -163,25 +165,25 @@ export class ElementKit {
     }
 
     async deleteDevice(deviceId: string): Promise<ElementResponse<unknown>> {
-        return await Axios.delete(`${this.serviceUrl}/api/v1/devices/${deviceId}`)
+        return await this.client.delete(`api/v1/devices/${deviceId}`)
     }
 
     async addInterfaceToDevice(deviceId: string, deviceInterface: CreateDeviceInterface): Promise<DeviceInterface> {
-        return (await Axios.post(`${this.serviceUrl}/api/v1/devices/${deviceId}/interfaces`, {
+        return (await this.client.post(`api/v1/devices/${deviceId}/interfaces`, {
             interface: deviceInterface
         })).data
     }
 
     async deleteInterface(deviceId: string, interfaceId: string): Promise<ElementResponse<unknown>> {
-        return (await Axios.delete(`${this.serviceUrl}/api/v1/devices/${deviceId}/interfaces/${interfaceId}`)).data
+        return (await this.client.delete(`api/v1/devices/${deviceId}/interfaces/${interfaceId}`)).data
     }
 
     async listInterfaces(deviceId: string): Promise<ElementResponse<DeviceInterface[]>> {
-        return (await Axios.get(`${this.serviceUrl}/api/v1/devices/${deviceId}/interfaces`)).data
+        return (await this.client.get(`api/v1/devices/${deviceId}/interfaces`)).data
     }
 
     async createAction(deviceId: string, interfaceId: string, opts: unknown): Promise<ElementActionResponse> {
-        return (await Axios.post(`${this.serviceUrl}/api/v1/devices/${deviceId}/interfaces/${interfaceId}/actions/send_down_frame`, {
+        return (await this.client.post(`api/v1/devices/${deviceId}/interfaces/${interfaceId}/actions/send_down_frame`, {
             opts
         })).data
     }
@@ -193,23 +195,23 @@ export class ElementKit {
                 ...opts
             }
         }
-        return (await Axios.post(`${this.serviceUrl}/api/v1/tags`, request)).data
+        return (await this.client.post(`api/v1/tags`, request)).data
     }
 
     async createTagPath(name: string): Promise<ElementResponse<Tag>> {
         const request = {
             name: name
         }
-        return (await Axios.post(`${this.serviceUrl}/api/v1/tags`, request)).data
+        return (await this.client.post(`api/v1/tags`, request)).data
     }
 
     async deleteTag(tagId: string): Promise<ElementResponse<unknown>> {
-        return (await Axios.delete(`${this.serviceUrl}/api/v1/tags${tagId}`))
+        return (await this.client.delete(`api/v1/tags${tagId}`))
     }
 
     /* Not in production yet */
     async updateReadings(data: MergeOptions): Promise<ElementResponse<unknown>> {
-        return await Axios.patch(`${this.serviceUrl}/api/v1/readings`, data)
+        return await this.client.patch(`api/v1/readings`, data)
     }
 }
 
