@@ -13,9 +13,10 @@ const raterLimiter = async (response: AxiosResponse): Promise<unknown> => {
     const rateLimitRemaining = response.headers['x-ratelimit-remaining']
     const rateLimitReset = response.headers['x-ratelimit-reset']
     console.log(`Rate limit remaining ${rateLimitRemaining}`)
-    if (rateLimitRemaining === 0) {
+    console.log(`Rate limit reset ${rateLimitReset}`)
+    if (rateLimitRemaining <= 5) {
         console.log(`Rate limit reset in ${rateLimitReset}`)
-        return new Promise(resolve => setTimeout(resolve, rateLimitReset))
+        return new Promise(resolve => setTimeout(resolve, rateLimitReset * 2))
     }
     return Promise.resolve()
 }
