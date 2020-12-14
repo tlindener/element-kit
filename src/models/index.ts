@@ -86,7 +86,7 @@ export interface Tag {
 }
 
 export interface ElementApiOptions {
-    rateLimit: RateLimit | undefined;
+    rateLimit?: RateLimit;
     apiKey: string;
     serviceUrl?: string;
 }
