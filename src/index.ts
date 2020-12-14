@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios'
+import axios, { AxiosInstance } from 'axios'
 import * as WebSocket from 'ws'
 import { EventEmitter } from 'events'
 import { ElementApiOptions, ElementResponse, Options } from './models'
@@ -8,21 +8,10 @@ import { ElementActionResponse } from './models/actions'
 import { Device, CreateDeviceInterface, DeviceInterface } from './models/devices'
 import { Packet } from './models/packets'
 
-const raterLimiter = async (response: AxiosResponse): Promise<unknown> => {
-
-    const rateLimitRemaining = response.headers['x-ratelimit-remaining']
-    const rateLimitReset = response.headers['x-ratelimit-reset']
-    console.log(`Rate limit remaining ${rateLimitRemaining}`)
-    console.log(`Rate limit reset ${rateLimitReset}`)
-    if (rateLimitRemaining <= 5) {
-        console.log(`Rate limit reset in ${rateLimitReset}`)
-        return new Promise(resolve => setTimeout(resolve, rateLimitReset * 2))
-    }
-    return Promise.resolve()
-}
-
 export class ElementKit {
     private client: AxiosInstance
+    private rateLimitRemaining: number
+    private rateLimitReset: number
 
     constructor(options: ElementApiOptions) {
         if (options.apiKey === undefined || options.apiKey === '') {
@@ -32,6 +21,8 @@ export class ElementKit {
             (!options.serviceUrl.startsWith('https') || !options.serviceUrl.startsWith('http'))) {
             throw new Error("serviceUrl must start with https")
         }
+        this.rateLimitRemaining = options.rateLimit?.remaining || 50
+        this.rateLimitReset = options.rateLimit?.reset || 5000
         this.client = axios.create({
             baseURL: `${options.serviceUrl || "https://element-iot.com"}/`,
         })
@@ -40,8 +31,25 @@ export class ElementKit {
             config.params['auth'] = options.apiKey
             return config;
         });
+        const that = this
+        this.client.interceptors.response.use(async (response) => {
+            const rateLimitRemaining = response.headers['x-ratelimit-remaining']
+            const rateLimitReset = response.headers['x-ratelimit-reset']
+            console.log(`Rate limit remaining ${rateLimitRemaining}`)
+            console.log(`Rate limit reset ${rateLimitReset}`)
+            that.rateLimitRemaining = rateLimitRemaining || 5
+            that.rateLimitReset = rateLimitReset || 5000
+            return response;
+        });
+        this.client.interceptors.request.use(async (config) => {
+            if (that.rateLimitRemaining <= 5) {
+                console.log(`Rate limit reset in ${that.rateLimitReset}`)
+                await new Promise(resolve => setTimeout(resolve, that.rateLimitReset * 2))
+            }
+            return config;
+        });
     }
-    
+
     async getDevice(elementDeviceId: string): Promise<ElementResponse<Device>> {
         return (await this.client.get(`api/v1/devices/${elementDeviceId}`)).data
     }
@@ -145,9 +153,6 @@ export class ElementKit {
             const response = (await this.client.get<ElementResponse<T>>(`api/v1/${resource}?${params}`))
             values = values.concat(response.data.body)
             retrieveAfterId = response.data.retrieve_after_id
-
-            await raterLimiter(response)
-
         } while (retrieveAfterId !== undefined)
         return values
 

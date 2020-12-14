@@ -86,8 +86,13 @@ export interface Tag {
 }
 
 export interface ElementApiOptions {
+    rateLimit: RateLimit | undefined;
     apiKey: string;
     serviceUrl?: string;
+}
+export interface RateLimit {
+    remaining: number;
+    reset: number;
 }
 
 export interface ElementActionResponse {
