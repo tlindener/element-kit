@@ -138,6 +138,9 @@ export class ElementKit {
         if (options.filter) {
             params += `&filter=${encodeURIComponent(options.filter)}`
         }
+        if(options.withProfile) {
+            params += `&with_profile=${options.withProfile}`
+        }
 
         return params.substring(1)
     }
