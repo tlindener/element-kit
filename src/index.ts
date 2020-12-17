@@ -18,7 +18,7 @@ export class ElementKit {
             throw new Error("Missing api key")
         }
         if (options.serviceUrl !== undefined &&
-            (!options.serviceUrl.startsWith('https') || !options.serviceUrl.startsWith('http'))) {
+            (!options.serviceUrl.startsWith('https') && !options.serviceUrl.startsWith('http'))) {
             throw new Error("serviceUrl must start with https")
         }
         this.rateLimitRemaining = options.rateLimit?.remaining || 50
