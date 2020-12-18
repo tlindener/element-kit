@@ -1,6 +1,6 @@
 {
   "name": "elementiot-client",
-  "version": "2.3.3",
+  "version": "2.3.4",
   "description": "Typescript client for ELEMENT IoT",
   "main": "lib/index.js",
   "scripts": {
