@@ -5,6 +5,7 @@ export interface Options {
     sortDirection?: 'asc' | 'desc';
     retrieveAfterId?: string;
     filter?: string;
+    withProfile? : boolean
 }
 
 export interface Reading {
@@ -86,8 +87,13 @@ export interface Tag {
 }
 
 export interface ElementApiOptions {
+    rateLimit?: RateLimit;
     apiKey: string;
     serviceUrl?: string;
+}
+export interface RateLimit {
+    remaining: number;
+    reset: number;
 }
 
 export interface ElementActionResponse {
