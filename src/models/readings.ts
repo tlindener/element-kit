@@ -15,3 +15,7 @@ export interface Reading {
     interface_id: string;
     inserted_at: Date;
 }
+
+export interface UpdatedReadings {
+    affected: number;
+}

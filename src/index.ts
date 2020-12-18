@@ -3,7 +3,7 @@ import * as WebSocket from 'ws'
 import { EventEmitter } from 'events'
 import { ElementApiOptions, ElementResponse, Options } from './models'
 import { CreateTagOpts, Tag } from './models/tags'
-import { MergeOptions, Reading } from './models/readings'
+import { MergeOptions, Reading, UpdatedReadings } from './models/readings'
 import { ElementActionResponse } from './models/actions'
 import { Device, CreateDeviceInterface, DeviceInterface } from './models/devices'
 import { Packet } from './models/packets'
@@ -218,8 +218,8 @@ export class ElementKit {
     }
 
     /* Not in production yet */
-    async updateReadings(data: MergeOptions): Promise<ElementResponse<unknown>> {
-        return await this.client.patch(`api/v1/readings`, data)
+    async updateReadings(data: MergeOptions): Promise<ElementResponse<UpdatedReadings>> {
+        return (await this.client.patch(`api/v1/readings`, data)).data
     }
 }
 
