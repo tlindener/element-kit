@@ -5,7 +5,7 @@ export interface Options {
     sortDirection?: 'asc' | 'desc';
     retrieveAfterId?: string;
     filter?: string;
-    withProfile? : boolean
+    withProfile?: boolean
 }
 
 export interface Reading {

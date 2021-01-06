@@ -4,7 +4,7 @@ import { EventEmitter } from 'events'
 import { ElementApiOptions, ElementResponse, Options } from './models'
 import { CreateTagOpts, Tag } from './models/tags'
 import { MergeOptions, Reading, UpdatedReadings } from './models/readings'
-import { ElementActionResponse } from './models/actions'
+import { ElementActionRequest, ElementActionResponse } from './models/actions'
 import { Device, CreateDeviceInterface, DeviceInterface } from './models/devices'
 import { Packet } from './models/packets'
 
@@ -22,7 +22,7 @@ export class ElementKit {
             throw new Error("serviceUrl must start with https")
         }
 
-        this.logger = options.logger ? options.logger :  console.log
+        this.logger = options.logger ? options.logger : console.log
 
         this.rateLimitRemaining = options.rateLimit?.remaining || 50
         this.rateLimitReset = options.rateLimit?.reset || 5000
@@ -193,16 +193,12 @@ export class ElementKit {
         return (await this.client.get(`api/v1/devices/${deviceId}/interfaces`)).data
     }
 
-    async createActionOnInterface(deviceId: string, interfaceId: string, opts: unknown): Promise<ElementActionResponse> {
-        return (await this.client.post(`api/v1/devices/${deviceId}/interfaces/${interfaceId}/actions/send_down_frame`, {
-            opts
-        })).data
+    async createActionOnInterface(deviceId: string, interfaceId: string, request: ElementActionRequest): Promise<ElementActionResponse> {
+        return (await this.client.post(`api/v1/devices/${deviceId}/interfaces/${interfaceId}/actions/send_down_frame`, request)).data
     }
 
-    async createAction(deviceId: string, opts: unknown): Promise<ElementActionResponse> {
-        return (await this.client.post(`api/v1/devices/${deviceId}/actions/send_down_frame`, {
-            opts
-        })).data
+    async createAction(deviceId: string, request: ElementActionRequest): Promise<ElementActionResponse> {
+        return (await this.client.post(`api/v1/devices/${deviceId}/actions/send_down_frame`, request)).data
     }
 
     async getAction(deviceId: string, actionId: string): Promise<ElementActionResponse> {

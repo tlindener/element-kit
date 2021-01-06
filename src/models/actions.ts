@@ -13,3 +13,7 @@ export interface ElementActionResponse {
     executed_at: null | Date;
     device_id: string;
 }
+
+export interface ElementActionRequest {
+    opts: unknown
+}
