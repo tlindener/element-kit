@@ -22,7 +22,7 @@ export class ElementKit {
             throw new Error("serviceUrl must start with https")
         }
 
-        this.logger = options.logger ? options.logger : this.logger
+        this.logger = options.logger ? options.logger :  console.log
 
         this.rateLimitRemaining = options.rateLimit?.remaining || 50
         this.rateLimitReset = options.rateLimit?.reset || 5000
@@ -254,7 +254,7 @@ export class ElementKitWS extends EventEmitter {
             (!options.serviceUrl.startsWith('wss') || !options.serviceUrl.startsWith('ws'))) {
             throw new Error("serviceUrl must start with ws:// or wss://")
         }
-        this.logger = options.logger ? options.logger : this.logger
+        this.logger = options.logger ? options.logger : console.log
         this.apiKey = options.apiKey
         this.serviceUrl = options.serviceUrl || "wss://element-iot.com"
         this.type = type
