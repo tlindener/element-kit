@@ -3,6 +3,7 @@ export interface ElementActionResponse {
     type: 'send_down_frame' | unknown;
     state: 'pending' | unknown;
     result: null | unknown;
+    events: unknown[];
     order: null | unknown;
     opts: unknown;
     mandate_id: string;

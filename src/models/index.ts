@@ -90,6 +90,7 @@ export interface ElementApiOptions {
     rateLimit?: RateLimit;
     apiKey: string;
     serviceUrl?: string;
+    logger?: (msg: string) => void
 }
 export interface RateLimit {
     remaining: number;

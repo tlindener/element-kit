@@ -12,7 +12,7 @@ export class ElementKit {
     private client: AxiosInstance
     private rateLimitRemaining: number
     private rateLimitReset: number
-
+    private logger: (msg) => void
     constructor(options: ElementApiOptions) {
         if (options.apiKey === undefined || options.apiKey === '') {
             throw new Error("Missing api key")
@@ -21,6 +21,9 @@ export class ElementKit {
             (!options.serviceUrl.startsWith('https') && !options.serviceUrl.startsWith('http'))) {
             throw new Error("serviceUrl must start with https")
         }
+
+        this.logger = options.logger ? options.logger : this.logger
+
         this.rateLimitRemaining = options.rateLimit?.remaining || 50
         this.rateLimitReset = options.rateLimit?.reset || 5000
         this.client = axios.create({
@@ -35,15 +38,15 @@ export class ElementKit {
         this.client.interceptors.response.use(async (response) => {
             const rateLimitRemaining = response.headers['x-ratelimit-remaining']
             const rateLimitReset = response.headers['x-ratelimit-reset']
-            console.log(`Rate limit remaining ${rateLimitRemaining}`)
-            console.log(`Rate limit reset ${rateLimitReset}`)
+            this.logger(`Rate limit remaining ${rateLimitRemaining}`)
+            this.logger(`Rate limit reset ${rateLimitReset}`)
             that.rateLimitRemaining = rateLimitRemaining || 5
             that.rateLimitReset = rateLimitReset || 5000
             return response;
         });
         this.client.interceptors.request.use(async (config) => {
             if (that.rateLimitRemaining <= 5) {
-                console.log(`Rate limit reset in ${that.rateLimitReset}`)
+                this.logger(`Rate limit reset in ${that.rateLimitReset}`)
                 await new Promise(resolve => setTimeout(resolve, that.rateLimitReset * 2))
             }
             return config;
@@ -138,7 +141,7 @@ export class ElementKit {
         if (options.filter) {
             params += `&filter=${encodeURIComponent(options.filter)}`
         }
-        if(options.withProfile) {
+        if (options.withProfile) {
             params += `&with_profile=${options.withProfile}`
         }
 
@@ -190,10 +193,20 @@ export class ElementKit {
         return (await this.client.get(`api/v1/devices/${deviceId}/interfaces`)).data
     }
 
-    async createAction(deviceId: string, interfaceId: string, opts: unknown): Promise<ElementActionResponse> {
+    async createActionOnInterface(deviceId: string, interfaceId: string, opts: unknown): Promise<ElementActionResponse> {
         return (await this.client.post(`api/v1/devices/${deviceId}/interfaces/${interfaceId}/actions/send_down_frame`, {
             opts
         })).data
+    }
+
+    async createAction(deviceId: string, opts: unknown): Promise<ElementActionResponse> {
+        return (await this.client.post(`api/v1/devices/${deviceId}/actions/send_down_frame`, {
+            opts
+        })).data
+    }
+
+    async getAction(deviceId: string, actionId: string): Promise<ElementActionResponse> {
+        return (await this.client.get(`api/v1/devices/${deviceId}/actions/${actionId}`)).data
     }
 
     async createTag(name: string, opts: CreateTagOpts | null = null): Promise<ElementResponse<Tag>> {
@@ -230,6 +243,7 @@ export class ElementKitWS extends EventEmitter {
     pingTimeout: NodeJS.Timeout
     ws: WebSocket
     type: string
+    private logger: (msg) => void
 
     constructor(options: ElementApiOptions, type: 'readings' | 'packets', tagId?: string) {
         super()
@@ -240,7 +254,7 @@ export class ElementKitWS extends EventEmitter {
             (!options.serviceUrl.startsWith('wss') || !options.serviceUrl.startsWith('ws'))) {
             throw new Error("serviceUrl must start with ws:// or wss://")
         }
-
+        this.logger = options.logger ? options.logger : this.logger
         this.apiKey = options.apiKey
         this.serviceUrl = options.serviceUrl || "wss://element-iot.com"
         this.type = type
@@ -280,13 +294,13 @@ export class ElementKitWS extends EventEmitter {
         }
     }
     private open() {
-        console.info("ELEMENT Kit Connection open")
+        this.logger("ELEMENT Kit Connection open")
         this.emit("open")
         this.heartbeat()
     }
 
     private heartbeat() {
-        console.info("ELEMENT Kit sending heartbeat")
+        this.logger("ELEMENT Kit sending heartbeat")
         clearTimeout(this.pingTimeout)
         this.pingTimeout = setTimeout(function () {
             this.heartbeat()
