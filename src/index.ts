@@ -303,4 +303,8 @@ export class ElementKitWS extends EventEmitter {
         }.bind(this), 30000 + 1000)
         this.ws.ping()
     }
+
+    disconnect() {
+        this.ws.close()
+    }
 }
