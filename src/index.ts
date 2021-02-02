@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios'
+import axios, { AxiosInstance } from 'axios'
 import * as WebSocket from 'ws'
 import { EventEmitter } from 'events'
 import { ElementApiOptions, ElementResponse, Options } from './models'
