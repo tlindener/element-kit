@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios'
+import axios, { AxiosInstance, AxiosResponse } from 'axios'
 import * as WebSocket from 'ws'
 import { EventEmitter } from 'events'
 import { ElementApiOptions, ElementResponse, Options } from './models'
@@ -12,23 +12,29 @@ export class ElementKit {
     private client: AxiosInstance
     private rateLimitRemaining: number
     private rateLimitReset: number
-    private logger: (msg) => void
-    constructor(options: ElementApiOptions) {
+    private logger: (msg: string) => void
+
+    constructor(options: ElementApiOptions, httpClient?: AxiosInstance) {
         if (options.apiKey === undefined || options.apiKey === '') {
             throw new Error("Missing api key")
         }
-        if (options.serviceUrl !== undefined &&
+        if (!httpClient && options.serviceUrl !== undefined &&
             (!options.serviceUrl.startsWith('https') && !options.serviceUrl.startsWith('http'))) {
             throw new Error("serviceUrl must start with https")
         }
 
         this.logger = options.logger ? options.logger : console.log
-
         this.rateLimitRemaining = options.rateLimit?.remaining || 50
         this.rateLimitReset = options.rateLimit?.reset || 5000
-        this.client = axios.create({
-            baseURL: `${options.serviceUrl || "https://element-iot.com"}/`,
-        })
+
+        if (!httpClient) {
+            this.client = axios.create({
+                baseURL: `${options.serviceUrl || "https://element-iot.com"}/`
+            })
+        } else {
+            this.client = httpClient
+        }
+
         this.client.interceptors.request.use((config) => {
             config.params = config.params || {};
             config.params['auth'] = options.apiKey
@@ -219,7 +225,7 @@ export class ElementKit {
         const request = {
             name: name
         }
-        return (await this.client.post(`api/v1/tags`, request)).data
+        return (await this.client.post(`api/v1/tags/mkdir`, request)).data
     }
 
     async deleteTag(tagId: string): Promise<ElementResponse<unknown>> {
