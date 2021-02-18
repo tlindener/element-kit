@@ -197,7 +197,7 @@ export class ElementKit {
     }
 
     async createDevice(name: string, tagId: string): Promise<ElementResponse<Device>> {
-        return (await this.client.post(`api / v1 / devices`, {
+        return (await this.client.post(`api/v1/devices`, {
             device: {
                 name: name,
                 tags: [{
@@ -208,11 +208,11 @@ export class ElementKit {
     }
 
     async deleteDevice(deviceId: string): Promise<ElementResponse<unknown>> {
-        return await this.client.delete(`api / v1 / devices / ${deviceId} `)
+        return await this.client.delete(`api/v1/devices/${deviceId}`)
     }
 
     async addInterfaceToDevice(deviceId: string, deviceInterface: CreateDeviceInterface): Promise<DeviceInterface> {
-        return (await this.client.post(`api / v1 / devices / ${deviceId} /interfaces`, {
+        return (await this.client.post(`api/v1/devices/${deviceId}/interfaces`, {
             interface: deviceInterface
         })).data
     }
