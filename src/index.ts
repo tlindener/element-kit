@@ -73,7 +73,7 @@ export class ElementKit {
 
     async getTags(options?: Options): Promise<Tag[]> {
         if (options?.limit && options?.limit <= 100) {
-            return (await this.client.get<ElementResponse<Tag[]>>(`api/v1/tags?${this.createParams(options)}`)).data.body
+            return (await this.client.get<ElementResponse<Tag[]>>(`api/v1/tags`, { params: this.createParams(options) })).data.body
         } else {
             return this.paginate<Tag[]>(`tags`, options)
         }
@@ -81,7 +81,7 @@ export class ElementKit {
 
     async getDevicesByTagId(tagId: string, options?: Options): Promise<Device[]> {
         if (options?.limit && options?.limit <= 100) {
-            return (await this.client.get<ElementResponse<Device[]>>(`api/v1/tags/${tagId}/devices?${this.createParams(options)}`)).data.body
+            return (await this.client.get<ElementResponse<Device[]>>(`api/v1/tags/${tagId}/devices`, { params: this.createParams(options) })).data.body
         } else {
             return this.paginate<Device[]>(`tags/${tagId}/devices`, options)
         }
@@ -89,7 +89,7 @@ export class ElementKit {
 
     async getDevices(options?: Options): Promise<Device[]> {
         if (options?.limit && options?.limit <= 100) {
-            return (await this.client.get<ElementResponse<Device[]>>(`api/v1/devices?${this.createParams(options)}`)).data.body
+            return (await this.client.get<ElementResponse<Device[]>>(`api/v1/devices`, { params: this.createParams(options) })).data.body
         } else {
             return this.paginate<Device[]>(`devices`, options)
         }
@@ -97,7 +97,7 @@ export class ElementKit {
 
     async getReadingsByTagId(tagId: string, options?: Options): Promise<Reading[]> {
         if (options?.limit && options?.limit <= 100) {
-            return (await this.client.get<ElementResponse<Reading[]>>(`api/v1/tags/${tagId}/readings?${this.createParams(options)}`)).data.body
+            return (await this.client.get<ElementResponse<Reading[]>>(`api/v1/tags/${tagId}/readings`, { params: this.createParams(options) })).data.body
         } else {
             return this.paginate<Reading[]>(`tags/${tagId}/readings`, options)
         }
@@ -105,7 +105,7 @@ export class ElementKit {
 
     async getPacketsByTagId(tagId: string, options?: Options): Promise<Packet[]> {
         if (options?.limit && options?.limit <= 100) {
-            return (await this.client.get<ElementResponse<Packet[]>>(`api/v1/tags/${tagId}/packets?${this.createParams(options)}`)).data.body
+            return (await this.client.get<ElementResponse<Packet[]>>(`api/v1/tags/${tagId}/packets`, { params: this.createParams(options) })).data.body
         } else {
             return this.paginate<Packet[]>(`tags/${tagId}/packets`, options)
         }
@@ -113,65 +113,91 @@ export class ElementKit {
 
     async getPackets(deviceId: string, options?: Options): Promise<Packet[]> {
         if (options?.limit && options?.limit <= 100) {
-            return (await this.client.get(`api/v1/devices/${deviceId}/packets?${this.createParams(options)}`)).data.body
+            return (await this.client.get(`api/v1/devices/${deviceId}/packets?`, { params: this.createParams(options) })).data.body
         } else {
             return this.paginate<Packet[]>(`devices/${deviceId}/packets`, options)
         }
     }
+
+    async getPacketsChunked(deviceId: string, onChunk: (chunk: Packet[]) => Promise<void>, options?: Options): Promise<void> {
+        return this.paginateChunked<Packet[]>(`devices/${deviceId}/packets`, onChunk, options)
+    }
+
+    async getReadingsChunked(deviceId: string, onChunk: (chunk: Reading[]) => Promise<void>, options?: Options): Promise<void> {
+        return this.paginateChunked<Reading[]>(`devices/${deviceId}/readings`, onChunk, options)
+    }
+
     async getReadings(deviceId: string, options?: Options): Promise<Reading[]> {
         if (options?.limit && options?.limit <= 100) {
-            return (await this.client.get(`api/v1/devices/${deviceId}/readings?${this.createParams(options)}`)).data.body
+            return (await this.client.get(`api/v1/devices/${deviceId}/readings`, { params: this.createParams(options) })).data.body
         } else {
             return this.paginate<Reading[]>(`devices/${deviceId}/readings`, options)
         }
     }
 
-    private createParams(options: Options): string {
-        let params = ""
+    private createParams(options: Options): any {
+        const params = {}
         if (options.limit) {
-            params += `&limit=${options.limit}`
+            params['limit'] = options.limit
         }
 
         if (options.retrieveAfterId) {
-            params += `&retrieve_after=${options.retrieveAfterId}`
+            params['retrieve_after'] = options.retrieveAfterId
         }
 
         if (options.sort) {
-            params += `&sort=${options.sort}`
+            params['sort'] = options.sort
         }
 
         if (options.sortDirection) {
-            params += `&sort_direction=${options.sortDirection}`
+            params['sort_direction'] = options.sortDirection
         }
 
         if (options.filter) {
-            params += `&filter=${encodeURIComponent(options.filter)}`
+            params['filter'] = options.filter
         }
         if (options.withProfile) {
-            params += `&with_profile=${options.withProfile}`
+            params['with_profile'] = options.withProfile
         }
 
-        return params.substring(1)
+        return params
     }
 
     private async paginate<T>(resource: string, options?: Options) {
-        let retrieveAfterId = undefined
+        let retrieveAfterId = options?.retrieveAfterId || undefined
         let values = []
         do {
             const params = this.createParams({
                 limit: 100,
-                retrieveAfterId, ...options
+                ...options,
+                retrieveAfterId
             })
-            const response = (await this.client.get<ElementResponse<T>>(`api/v1/${resource}?${params}`))
+            const response = await this.client.get<ElementResponse<T>>(`api/v1/${resource}`, { params })
             values = values.concat(response.data.body)
             retrieveAfterId = response.data.retrieve_after_id
         } while (retrieveAfterId !== undefined)
         return values
 
     }
+    private async paginateChunked<T>(resource: string, onChunk: (chunk: T) => Promise<void>, options?: Options) {
+        let retrieveAfterId = options?.retrieveAfterId || undefined
+        do {
+            const params = this.createParams({
+                limit: 100,
+                ...options,
+                retrieveAfterId
+            })
+            const response = await this.client.get<ElementResponse<T>>(`api/v1/${resource}`, { params })
+            if ((response.data.body as any).length > 0) {
+                await onChunk(response.data.body)
+            }
+
+            retrieveAfterId = response.data.retrieve_after_id
+        } while (retrieveAfterId !== undefined)
+    }
 
     async createDevice(name: string, tagId: string): Promise<ElementResponse<Device>> {
-        return (await this.client.post(`api/v1/devices`, {
+        return (await this.client.post(`api / v1 / devices`, {
             device: {
                 name: name,
                 tags: [{
@@ -182,11 +208,11 @@ export class ElementKit {
     }
 
     async deleteDevice(deviceId: string): Promise<ElementResponse<unknown>> {
-        return await this.client.delete(`api/v1/devices/${deviceId}`)
+        return await this.client.delete(`api / v1 / devices / ${deviceId} `)
     }
 
     async addInterfaceToDevice(deviceId: string, deviceInterface: CreateDeviceInterface): Promise<DeviceInterface> {
-        return (await this.client.post(`api/v1/devices/${deviceId}/interfaces`, {
+        return (await this.client.post(`api / v1 / devices / ${deviceId} /interfaces`, {
             interface: deviceInterface
         })).data
     }
