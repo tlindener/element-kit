@@ -296,9 +296,7 @@ export class ElementKitWS extends EventEmitter {
 
         this.ws.on('open', this.open.bind(this));
         this.ws.on('ping', this.heartbeat.bind(this));
-        this.ws.on('close', function () {
-            clearTimeout(this.pingTimeout);
-        }.bind(this));
+        this.ws.on('close', this.close.bind(this));
         this.ws.on('error', function onError(error) {
             this.emit('error', error)
         }.bind(this))
@@ -321,10 +319,17 @@ export class ElementKitWS extends EventEmitter {
             }
         }
     }
+
     private open() {
         this.logger("ELEMENT Kit Connection open")
         this.emit("open")
         this.heartbeat()
+    }
+    private close() {
+        this.logger("ELEMENT Kit Connection closed")
+        clearTimeout(this.pingTimeout)
+        this.emit("close")
+        
     }
 
     private heartbeat() {
